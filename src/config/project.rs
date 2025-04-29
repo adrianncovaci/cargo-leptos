@@ -188,10 +188,16 @@ impl Project {
             vec.push(("SERVER_FN_MOD_PATH", self.server_fn_mod_path.to_string()));
         }
 
-        // Set the default to erase-components mode if in debug mode and not explicitly disabled
+        // Set the default to erase-components mode by appending to `RUSTFLAGS` if in debug mode and not explicitly disabled
         // or always enabled
         if (!self.disable_erase_components && !self.release) || (self.always_erase_components) {
-            vec.push(("RUSTFLAGS", "--cfg erase_components".to_string()))
+            let current_flags = std::env::var("RUSTFLAGS").unwrap_or_default();
+            let new_flags = if current_flags.is_empty() {
+                "--cfg erase_components".to_string()
+            } else {
+                format!("{} --cfg erase_components", current_flags)
+            };
+            vec.push(("RUSTFLAGS", new_flags))
         }
         vec
     }
