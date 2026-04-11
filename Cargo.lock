@@ -6249,9 +6249,7 @@ dependencies = [
 
 [[package]]
 name = "wasm_split_cli_support"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce40bc4da67a594d1de9d199715c11906044003ec36a49f3c60372d50caac09e"
+version = "0.2.1"
 dependencies = [
  "eyre",
  "lazy_static",
