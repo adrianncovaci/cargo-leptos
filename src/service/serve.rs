@@ -8,10 +8,13 @@ use crate::{
 use camino::Utf8PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::{process::Command, select, task::JoinHandle};
 use tokio::io::AsyncWrite;
-use tokio_process_tools::broadcast::BroadcastOutputStream;
-use tokio_process_tools::{Inspector, LineParsingOptions, Next, Process, ProcessHandle};
+use tokio::{process::Command, select, task::JoinHandle};
+use tokio_process_tools::{
+    AutoName, BroadcastOutputStream, Consumer, LineParsingOptions, Next, NumBytesExt, Process,
+    ProcessHandle, ReliableDelivery, ReplayEnabled, DEFAULT_MAX_BUFFERED_CHUNKS,
+    DEFAULT_READ_CHUNK_SIZE,
+};
 
 pub async fn spawn(proj: &Arc<Project>) -> JoinHandle<Result<()>> {
     let mut int = Interrupt::subscribe_shutdown();
@@ -47,13 +50,17 @@ pub async fn spawn_oneshot(proj: &Arc<Project>) -> JoinHandle<Result<()>> {
           _ = int.recv() => {
                 server.terminate().await;
           },
-        };
+        }
         Ok(())
     })
 }
 
 struct ServerProcess {
-    process: Option<(ProcessHandle<BroadcastOutputStream>, Inspector, Inspector)>,
+    process: Option<(
+        ProcessHandle<BroadcastOutputStream<ReliableDelivery, ReplayEnabled>>,
+        Consumer<()>,
+        Consumer<()>,
+    )>,
     envs: Vec<(&'static str, String)>,
     binary: Utf8PathBuf,
     bin_args: Option<Vec<String>>,
@@ -93,10 +100,10 @@ impl ServerProcess {
             trace!("Serve stopped");
         }
 
-        if let Err(err) = stdout_inspector.cancel().await {
+        if let Err(err) = stdout_inspector.cancel(Duration::from_secs(1)).await {
             error!("Serve error aborting stdout inspector: {err}");
         };
-        if let Err(err) = stderr_inspector.cancel().await {
+        if let Err(err) = stderr_inspector.cancel(Duration::from_secs(1)).await {
             error!("Serve error aborting stderr inspector: {err}");
         };
     }
@@ -110,7 +117,7 @@ impl ServerProcess {
 
     async fn wait(&mut self) -> Result<()> {
         if let Some((process, _, _)) = self.process.as_mut() {
-            if let Err(e) = process.wait_for_completion(None).await {
+            if let Err(e) = process.wait_for_completion(Duration::MAX).await {
                 error!("Serve error while waiting for server process to exit: {e}");
             } else {
                 trace!("Serve process exited");
@@ -158,9 +165,22 @@ impl ServerProcess {
             cmd.envs(self.envs.clone());
             cmd.args(bin_args);
 
-            let handle = Process::new(cmd).spawn_broadcast()?;
+            let handle = Process::new(cmd)
+                .name(AutoName::program_only())
+                .stdout_and_stderr(|stream| {
+                    stream
+                        .broadcast()
+                        .reliable_for_active_subscribers()
+                        .replay_last_bytes(1.megabytes())
+                        .read_chunk_size(DEFAULT_READ_CHUNK_SIZE)
+                        .max_buffered_chunks(DEFAULT_MAX_BUFFERED_CHUNKS)
+                })
+                .spawn()?;
 
-            async fn write_to<W: AsyncWrite + Unpin>(mut to: W, data: &str) -> tokio::io::Result<()> {
+            async fn write_to<W: AsyncWrite + Unpin>(
+                mut to: W,
+                data: &str,
+            ) -> tokio::io::Result<()> {
                 use tokio::io::AsyncWriteExt;
                 to.write_all(data.as_bytes()).await?;
                 to.write_all(b"\n").await?;
@@ -172,24 +192,30 @@ impl ServerProcess {
             // We do this asynchronously using the tokio::io::std{out|err}() handles,
             // as writing to stdout/stderr directly using print!() could result in unhandled
             // "failed printing to stdout: Resource temporarily unavailable (os error 35)" errors.
-            let stdout_inspector = handle.stdout().inspect_lines_async(|line| {
-                let line = line.to_string();
-                Box::pin(async move {
-                    if let Err(err) = write_to(tokio::io::stdout(), &line).await {
-                        error!("Could not forward server process output to stdout: {err}");
+            let stdout_inspector: Consumer<()> = handle.stdout().inspect_lines_async(
+                |line| {
+                    let line = line.to_string();
+                    async move {
+                        if let Err(err) = write_to(tokio::io::stdout(), &line).await {
+                            error!("Could not forward server process output to stdout: {err}");
+                        }
+                        Next::Continue
                     }
-                    Next::Continue
-                })
-            }, LineParsingOptions::default());
-            let stderr_inspector = handle.stderr().inspect_lines_async(|line| {
-                let line = line.to_string();
-                Box::pin(async move {
-                    if let Err(err) = write_to(tokio::io::stderr(), &line).await {
-                        error!("Could not forward server process output to stderr: {err}");
+                },
+                LineParsingOptions::default(),
+            );
+            let stderr_inspector: Consumer<()> = handle.stderr().inspect_lines_async(
+                |line| {
+                    let line = line.to_string();
+                    async move {
+                        if let Err(err) = write_to(tokio::io::stderr(), &line).await {
+                            error!("Could not forward server process output to stderr: {err}");
+                        }
+                        Next::Continue
                     }
-                    Next::Continue
-                })
-            }, LineParsingOptions::default());
+                },
+                LineParsingOptions::default(),
+            );
 
             let port = self
                 .envs
