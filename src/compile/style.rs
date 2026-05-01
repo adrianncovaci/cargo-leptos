@@ -95,7 +95,9 @@ async fn process_css(proj: &Project, css: String) -> Result<Product> {
     let filename: String = if let Some(tw) = proj.style.tailwind.clone() {
         tw.tmp_file.to_string()
     } else {
-        proj.style.file.as_ref()
+        proj.style
+            .file
+            .as_ref()
             .map(|f| f.source.to_string())
             .unwrap_or_default()
     };
@@ -107,13 +109,11 @@ async fn process_css(proj: &Project, css: String) -> Result<Product> {
 
     let css: String = match StyleSheet::parse(&css, parse_options) {
         Ok(mut stylesheet) => {
-            if proj.release {
-                let minify_options = MinifyOptions {
-                    targets,
-                    ..Default::default()
-                };
-                stylesheet.minify(minify_options)?;
-            }
+            stylesheet.minify(MinifyOptions {
+                targets,
+                ..Default::default()
+            })?;
+
             let options = PrinterOptions::<'_> {
                 targets,
                 minify: proj.release,
@@ -144,5 +144,3 @@ async fn process_css(proj: &Project, css: String) -> Result<Product> {
     };
     Ok(prod)
 }
-
-
