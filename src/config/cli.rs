@@ -77,12 +77,31 @@ pub struct Opts {
     #[arg(long, conflicts_with = "frontend_only")]
     pub server_only: bool,
 
-    /// Gracefully terminate the server process whenever termination is required.
-    /// The server SHOULD handle SIGINT and/or SIGTERM signals on unix
-    /// and CTRL+C and/or CTRL+BREAK signals on Windows systems.
-    /// A good cross-platform starting point is tokio's `tokio::signal::ctrl_c` function.
+    /// Gracefully terminate the server process whenever termination is required. The server SHOULD
+    /// handle SIGINT and/or SIGTERM signals on unix and CTRL+BREAK signals on Windows.
+    ///
+    /// Defaults to true. Disable with `--graceful-shutdown false`.
+    ///
+    /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown`. The CLI
+    /// value takes precedence when set explicitly.
+    #[arg(long, value_parser = clap::builder::BoolishValueParser::new(), action = clap::ArgAction::Set)]
+    pub graceful_shutdown: Option<bool>,
+
+    /// Seconds to wait after sending SIGINT (or CTRL+BREAK on Windows) before escalating to SIGTERM
+    /// during a graceful shutdown.
+    ///
+    /// Can also be configured via `[package.metadata.leptos]` key
+    /// `graceful-shutdown-interrupt-timeout-secs`.
     #[arg(long)]
-    pub graceful_shutdown: bool,
+    pub graceful_shutdown_interrupt_timeout_secs: Option<u64>,
+
+    /// Seconds to wait after sending SIGTERM before escalating to SIGKILL during a graceful
+    /// shutdown.
+    ///
+    /// Can also be configured via `[package.metadata.leptos]` key
+    /// `graceful-shutdown-terminate-timeout-secs`.
+    #[arg(long)]
+    pub graceful_shutdown_terminate_timeout_secs: Option<u64>,
 }
 
 #[derive(Debug, Clone, Parser, PartialEq, Default)]

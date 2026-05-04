@@ -1,6 +1,5 @@
 ---
 source: src/config/tests.rs
-assertion_line: 50
 expression: conf
 ---
 Config {
@@ -81,7 +80,11 @@ Config {
             always_erase_components: false,
             server_fn_mod_path: true,
             wasm_opt_features: None,
-            graceful_shutdown: true,
+            shutdown: ShutdownPolicy {
+                graceful: true,
+                interrupt_timeout: 2s,
+                terminate_timeout: 4s,
+            },
             ..
         },
     ],
@@ -104,7 +107,9 @@ Config {
         split: false,
         frontend_only: false,
         server_only: false,
-        graceful_shutdown: true,
+        graceful_shutdown: None,
+        graceful_shutdown_interrupt_timeout_secs: None,
+        graceful_shutdown_terminate_timeout_secs: None,
     },
     watch: true,
     ..

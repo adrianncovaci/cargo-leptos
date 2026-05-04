@@ -24,7 +24,9 @@ fn release_opts() -> Opts {
         frontend_only: false,
         server_only: false,
         clear: false,
-        graceful_shutdown: true,
+        graceful_shutdown: None,
+        graceful_shutdown_interrupt_timeout_secs: None,
+        graceful_shutdown_terminate_timeout_secs: None,
     }
 }
 fn dev_opts() -> Opts {
@@ -45,7 +47,9 @@ fn dev_opts() -> Opts {
         frontend_only: false,
         server_only: false,
         clear: false,
-        graceful_shutdown: true,
+        graceful_shutdown: None,
+        graceful_shutdown_interrupt_timeout_secs: None,
+        graceful_shutdown_terminate_timeout_secs: None,
     }
 }
 

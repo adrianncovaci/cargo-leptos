@@ -1,5 +1,5 @@
 use crate::{
-    config::Project,
+    config::{Project, ShutdownPolicy},
     ext::{append_str_to_filename, determine_pdb_filename, fs, Paint},
     internal_prelude::*,
     logger::GRAY,
@@ -9,12 +9,14 @@ use camino::Utf8PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::AsyncWrite;
-use tokio::{process::Command, select, task::JoinHandle};
+use tokio::{join, process::Command, select, task::JoinHandle};
 use tokio_process_tools::{
     AutoName, BroadcastOutputStream, Consumer, LineParsingOptions, Next, NumBytesExt, Process,
     ProcessHandle, ReliableDelivery, ReplayEnabled, DEFAULT_MAX_BUFFERED_CHUNKS,
     DEFAULT_READ_CHUNK_SIZE,
 };
+
+const INSPECTOR_CANCEL_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub async fn spawn(proj: &Arc<Project>) -> JoinHandle<Result<()>> {
     let mut int = Interrupt::subscribe_shutdown();
@@ -64,7 +66,7 @@ struct ServerProcess {
     envs: Vec<(&'static str, String)>,
     binary: Utf8PathBuf,
     bin_args: Option<Vec<String>>,
-    graceful_shutdown: bool,
+    shutdown_policy: ShutdownPolicy,
 }
 
 impl ServerProcess {
@@ -74,7 +76,7 @@ impl ServerProcess {
             envs: proj.to_envs(false),
             binary: proj.bin.exe_file.clone(),
             bin_args: proj.bin.bin_args.clone(),
-            graceful_shutdown: proj.graceful_shutdown,
+            shutdown_policy: proj.shutdown_policy,
         }
     }
 
@@ -89,21 +91,33 @@ impl ServerProcess {
             return;
         };
 
-        let (interrupt_timeout, terminate_timeout) = match self.graceful_shutdown {
-            true => (Duration::from_secs(4), Duration::from_secs(8)),
-            false => (Duration::from_secs(0), Duration::from_secs(0)),
+        let result = if self.shutdown_policy.graceful {
+            handle
+                .terminate(
+                    self.shutdown_policy.interrupt_timeout,
+                    self.shutdown_policy.terminate_timeout,
+                )
+                .await
+                .map(|_| ())
+                .map_err(anyhow::Error::from)
+        } else {
+            handle.kill().await.map_err(anyhow::Error::from)
         };
 
-        if let Err(e) = handle.terminate(interrupt_timeout, terminate_timeout).await {
+        if let Err(e) = result {
             error!("Serve error terminating server process: {e}");
         } else {
             trace!("Serve stopped");
         }
 
-        if let Err(err) = stdout_inspector.cancel(Duration::from_secs(1)).await {
+        let (stdout_err, stderr_err) = join!(
+            stdout_inspector.cancel(INSPECTOR_CANCEL_TIMEOUT),
+            stderr_inspector.cancel(INSPECTOR_CANCEL_TIMEOUT)
+        );
+        if let Err(err) = stdout_err {
             error!("Serve error aborting stdout inspector: {err}");
         };
-        if let Err(err) = stderr_inspector.cancel(Duration::from_secs(1)).await {
+        if let Err(err) = stderr_err {
             error!("Serve error aborting stderr inspector: {err}");
         };
     }
@@ -228,13 +242,12 @@ impl ServerProcess {
                     }
                 })
                 .unwrap_or_default();
-            info!(
-                "Serving at http://{port}{}",
-                match self.graceful_shutdown {
-                    true => " (with graceful shutdown)",
-                    false => " (graceful shutdown disabled)",
-                }
-            );
+            let suffix = if self.shutdown_policy.graceful {
+                " (with graceful shutdown)"
+            } else {
+                ""
+            };
+            info!("Serving at http://{port}{suffix}");
             Some((handle, stdout_inspector, stderr_inspector))
         } else {
             debug!("Serve no exe found {}", GRAY.paint(bin.as_str()));
