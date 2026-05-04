@@ -11,9 +11,9 @@ use std::time::Duration;
 use tokio::io::AsyncWrite;
 use tokio::{join, process::Command, select, task::JoinHandle};
 use tokio_process_tools::{
-    AutoName, BroadcastOutputStream, Consumer, LineParsingOptions, Next, NumBytesExt, Process,
-    ProcessHandle, ReliableDelivery, ReplayEnabled, DEFAULT_MAX_BUFFERED_CHUNKS,
-    DEFAULT_READ_CHUNK_SIZE,
+    AutoName, BroadcastOutputStream, Consumer, GracefulTimeouts, LineParsingOptions, Next,
+    NumBytesExt, Process, ProcessHandle, ReliableDelivery, ReplayEnabled,
+    DEFAULT_MAX_BUFFERED_CHUNKS, DEFAULT_READ_CHUNK_SIZE,
 };
 
 const INSPECTOR_CANCEL_TIMEOUT: Duration = Duration::from_secs(1);
@@ -92,11 +92,21 @@ impl ServerProcess {
         };
 
         let result = if self.shutdown_policy.graceful {
+            #[cfg(unix)]
+            let timeouts = GracefulTimeouts {
+                interrupt_timeout: self.shutdown_policy.interrupt_timeout,
+                terminate_timeout: self.shutdown_policy.terminate_timeout,
+            };
+            // Windows only has a single CTRL_BREAK_EVENT -> TerminateProcess phase, so
+            // `interrupt_timeout` is unused there. We use `terminate_timeout` as the only budget
+            // before the forceful TerminateProcess.
+            #[cfg(windows)]
+            let timeouts = GracefulTimeouts {
+                graceful_timeout: self.shutdown_policy.terminate_timeout,
+            };
+
             handle
-                .terminate(
-                    self.shutdown_policy.interrupt_timeout,
-                    self.shutdown_policy.terminate_timeout,
-                )
+                .terminate(timeouts)
                 .await
                 .map(|_| ())
                 .map_err(anyhow::Error::from)

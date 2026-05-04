@@ -5741,9 +5741,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-process-tools"
-version = "0.9.2"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "394e3c6eeb7db89b83a1ee3f1c0684dd86075a2f55916fce39a6d1e893b4063c"
+checksum = "afb023b2e1105d48cb3c4945540b19c83c6f49abf29bfa974ab36787e262f490"
 dependencies = [
  "bytes",
  "memchr",
