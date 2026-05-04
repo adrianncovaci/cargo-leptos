@@ -84,7 +84,7 @@ Config {
             wasm_opt_features: None,
             shutdown: ShutdownPolicy {
                 graceful: true,
-                interrupt_timeout: 2s,
+                interrupt_timeout: 4s,
                 terminate_timeout: 4s,
             },
             ..
