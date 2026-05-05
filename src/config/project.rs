@@ -36,7 +36,7 @@ pub struct ShutdownPolicy {
     pub interrupt_timeout: Duration,
 
     /// Used for the SIGTERM termination signal on Unix systems and the CTRL_BREAK_EVENT
-    /// signal on Windows systems (2-phase graceful termination, no interrup equivalent).
+    /// signal on Windows systems (2-phase graceful termination, no interrupt equivalent).
     pub terminate_timeout: Duration,
 }
 

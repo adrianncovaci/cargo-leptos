@@ -207,10 +207,14 @@ impl ServerProcess {
                 Ok(())
             }
 
-            // Let's forward captured stdout/stderr lines to the output of our process.
-            // We do this asynchronously using the tokio::io::std{out|err}() handles,
-            // as writing to stdout/stderr directly using print!() could result in unhandled
-            // "failed printing to stdout: Resource temporarily unavailable (os error 35)" errors.
+            // Let's forward captured stdout/stderr lines to the output of our process. We do this
+            // asynchronously using the tokio::io::std{out|err}() handles, as writing to
+            // stdout/stderr directly using print!() could result in unhandled "failed printing to
+            // stdout: Resource temporarily unavailable" errors should the cargo-leptos output be
+            // consumed too slowly. This can happen because tokio puts the stdio fds into
+            // non-blocking mode (once touched) and std print! has no support for that, they just
+            // panic when an EAGAIN error is observed. Tokio's stdio handles instead asynchronously
+            // wait internally, handling the slow drainage and preventing a blocked runtime.
             let stdout_inspector: Consumer<()> = handle.stdout().inspect_lines_async(
                 |line| {
                     let line = line.to_string();
