@@ -29,8 +29,14 @@ const DEFAULT_GRACEFUL_SHUTDOWN_TERMINATE_TIMEOUT_SECS: u64 = 4;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ShutdownPolicy {
+    /// Whether graceful shutdown is enabled. If disabled, the served app will simply be killed.
     pub graceful: bool,
+
+    /// Used for the SIGINT termination signal on Unix systems (3-phase graceful termination).
     pub interrupt_timeout: Duration,
+
+    /// Used for the SIGTERM termination signal on Unix systems and the CTRL_BREAK_EVENT
+    /// signal on Windows systems (2-phase graceful termination, no interrup equivalent).
     pub terminate_timeout: Duration,
 }
 

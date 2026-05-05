@@ -92,18 +92,13 @@ impl ServerProcess {
         };
 
         let result = if self.shutdown_policy.graceful {
-            #[cfg(unix)]
-            let timeouts = GracefulTimeouts {
-                interrupt_timeout: self.shutdown_policy.interrupt_timeout,
-                terminate_timeout: self.shutdown_policy.terminate_timeout,
-            };
-            // Windows only has a single CTRL_BREAK_EVENT -> TerminateProcess phase, so
-            // `interrupt_timeout` is unused there. We use `terminate_timeout` as the only budget
-            // before the forceful TerminateProcess.
-            #[cfg(windows)]
-            let timeouts = GracefulTimeouts {
-                graceful_timeout: self.shutdown_policy.terminate_timeout,
-            };
+            let timeouts = GracefulTimeouts::builder()
+                .unix((
+                    self.shutdown_policy.interrupt_timeout,
+                    self.shutdown_policy.terminate_timeout,
+                ))
+                .windows(self.shutdown_policy.terminate_timeout)
+                .build();
 
             handle
                 .terminate(timeouts)
