@@ -623,7 +623,6 @@ dependencies = [
  "tokio",
  "tokio-process-tools",
  "tracing",
- "unwrap-infallible",
  "walkdir",
  "wasm_split_cli_support",
  "which",

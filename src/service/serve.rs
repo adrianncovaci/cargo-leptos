@@ -11,17 +11,16 @@ use std::time::Duration;
 use tokio::io::AsyncWrite;
 use tokio::{join, process::Command, select, task::JoinHandle};
 use tokio_process_tools::{
-    AutoName, BroadcastOutputStream, Consumable, Consumer, GracefulShutdown, LineOverflowBehavior,
-    LineParsingOptions, Next, NumBytesExt, ParseLines, Process, ProcessHandle,
-    ReliableWithBackpressure, ReplayEnabled, UnixGracefulShutdown, WindowsGracefulShutdown,
+    AutoName, Consumable, Consumer, GracefulShutdown, LineOverflowBehavior, LineParsingOptions,
+    Next, NumBytesExt, ParseLines, Process, ProcessHandle, ReliableWithBackpressure, ReplayEnabled,
+    SingleSubscriberOutputStream, UnixGracefulShutdown, WindowsGracefulShutdown,
     DEFAULT_MAX_BUFFERED_CHUNKS, DEFAULT_MAX_LINE_LENGTH, DEFAULT_READ_CHUNK_SIZE,
 };
-use unwrap_infallible::UnwrapInfallible;
 
 const INSPECTOR_CANCEL_TIMEOUT: Duration = Duration::from_secs(1);
 
 type ServerProcessHandle =
-    ProcessHandle<BroadcastOutputStream<ReliableWithBackpressure, ReplayEnabled>>;
+    ProcessHandle<SingleSubscriberOutputStream<ReliableWithBackpressure, ReplayEnabled>>;
 
 pub async fn spawn(proj: &Arc<Project>) -> JoinHandle<Result<()>> {
     let mut int = Interrupt::subscribe_shutdown();
@@ -190,7 +189,7 @@ impl ServerProcess {
                 .name(AutoName::program_only())
                 .stdout_and_stderr(|stream| {
                     stream
-                        .broadcast()
+                        .single_subscriber()
                         .reliable_with_backpressure()
                         // Replay buffer only needs to bridge the gap between process spawn and the
                         // first consumer attaching below. We call `seal_replay()` immediately
@@ -225,9 +224,9 @@ impl ServerProcess {
                 .overflow_behavior(LineOverflowBehavior::DropAdditionalData)
                 .buffer_compaction_threshold(None)
                 .build();
-            let stdout_inspector = handle
-                .stdout()
-                .consume_async(ParseLines::inspect_async(line_parsing_options, |line| {
+            let stdout_inspector = handle.stdout().consume_async(ParseLines::inspect_async(
+                line_parsing_options,
+                |line| {
                     let line = line.to_string();
                     async move {
                         if let Err(err) = write_to(tokio::io::stdout(), &line).await {
@@ -235,11 +234,11 @@ impl ServerProcess {
                         }
                         Next::Continue
                     }
-                }))
-                .unwrap_infallible();
-            let stderr_inspector = handle
-                .stderr()
-                .consume_async(ParseLines::inspect_async(line_parsing_options, |line| {
+                },
+            ))?;
+            let stderr_inspector = handle.stderr().consume_async(ParseLines::inspect_async(
+                line_parsing_options,
+                |line| {
                     let line = line.to_string();
                     async move {
                         if let Err(err) = write_to(tokio::io::stderr(), &line).await {
@@ -247,8 +246,8 @@ impl ServerProcess {
                         }
                         Next::Continue
                     }
-                }))
-                .unwrap_infallible();
+                },
+            ))?;
 
             // Inspectors are attached above so they receive the replay buffer. We don't attach any
             // late subscribers after, so we can safely inform the output stream here to not

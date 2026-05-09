@@ -101,8 +101,7 @@ pub struct Opts {
     #[arg(long)]
     pub graceful_shutdown_timeout_secs: Option<u64>,
 
-    /// The Unix signal to use for graceful shutdown. One of: SIGINT, SIGTERM.
-    /// Has no effect on Windows.
+    /// The Unix signal to use for graceful shutdown. Has no effect on Windows.
     ///
     /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown-unix-signal`.
     /// The CLI value takes precedence when set explicitly.
