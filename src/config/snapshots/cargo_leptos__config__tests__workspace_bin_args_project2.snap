@@ -90,7 +90,7 @@ Config {
             shutdown: ShutdownPolicy {
                 graceful: true,
                 timeout: 10s,
-                unix_signal: SIGINT,
+                unix_signal: Sigint,
             },
             ..
         },

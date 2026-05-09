@@ -75,7 +75,7 @@ The dependency for [sass](https://sass-lang.com/install) is automatically instal
 Different versions of the dependencies might accumulate in this directory, so feel free to delete it.
 
 | OS      | Example                                   |
-| ------- | ----------------------------------------- |
+|---------|-------------------------------------------|
 | Linux   | /home/alice/.cache/cargo-leptos           |
 | macOS   | /Users/Alice/Library/Caches/cargo-leptos  |
 | Windows | C:\Users\Alice\AppData\Local\cargo-leptos |
@@ -389,8 +389,8 @@ server-fn-mod-path = false
 # escalates to SIGKILL after the timeout below. On Windows it sends CTRL_BREAK_EVENT and
 # escalates to TerminateProcess. Disable to restore the previous immediate-kill behavior.
 #
-# Should your app not register any signal handler, this can still be left active. The default
-# disposition is to immediately kill the process should no handler be registered.
+# If your app does not register a handler for the configured signal, the OS default
+# disposition kicks in (typically immediate termination), so leaving this enabled is safe.
 #
 # Optional. Defaults to true. Env: LEPTOS_GRACEFUL_SHUTDOWN.
 graceful-shutdown = true

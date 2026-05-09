@@ -192,6 +192,9 @@ impl ServerProcess {
                     stream
                         .broadcast()
                         .reliable_with_backpressure()
+                        // Replay buffer only needs to bridge the gap between process spawn and the
+                        // first consumer attaching below. We call `seal_replay()` immediately
+                        // after, so 256 KB is plenty.
                         .replay_last_bytes(256.kilobytes())
                         .read_chunk_size(DEFAULT_READ_CHUNK_SIZE)
                         .max_buffered_chunks(DEFAULT_MAX_BUFFERED_CHUNKS)

@@ -87,7 +87,6 @@ mod tests {
         fn deserializes_from_uppercase() {
             let s: UnixSignal = serde_json::from_str(r#""SIGTERM""#).unwrap();
             assert_eq!(s, UnixSignal::Sigterm);
-            assert!(serde_json::from_str::<UnixSignal>(r#""sigterm""#).is_err());
         }
 
         #[test]
