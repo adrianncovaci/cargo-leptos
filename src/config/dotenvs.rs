@@ -1,4 +1,6 @@
-use super::{ProjectConfig, ENV_VAR_LEPTOS_SASS_VERSION, ENV_VAR_LEPTOS_TAILWIND_VERSION};
+use super::{
+    ProjectConfig, UnixSignal, ENV_VAR_LEPTOS_SASS_VERSION, ENV_VAR_LEPTOS_TAILWIND_VERSION,
+};
 use crate::internal_prelude::*;
 use camino::{Utf8Path, Utf8PathBuf};
 use std::{env, fs};
@@ -54,6 +56,14 @@ fn overlay(conf: &mut ProjectConfig, envs: impl Iterator<Item = (String, String)
             "LEPTOS_BIN_TARGET_DIR" => conf.bin_target_dir = Some(val),
             "LEPTOS_BIN_CARGO_COMMAND" => conf.bin_cargo_command = Some(val),
             "LEPTOS_JS_MINIFY" => conf.js_minify = val.parse()?,
+            "LEPTOS_GRACEFUL_SHUTDOWN" => conf.graceful_shutdown = Some(val.parse()?),
+            "LEPTOS_GRACEFUL_SHUTDOWN_TIMEOUT_SECS" => {
+                conf.graceful_shutdown_timeout_secs = Some(val.parse()?)
+            }
+            "LEPTOS_GRACEFUL_SHUTDOWN_UNIX_SIGNAL" => {
+                conf.graceful_shutdown_unix_signal =
+                    Some(UnixSignal::parse_env(&val).map_err(|e| eyre!(e))?)
+            }
             "SERVER_FN_PREFIX" => conf.server_fn_prefix = Some(val),
             "DISABLE_SERVER_FN_HASH" => conf.disable_server_fn_hash = true,
             "LEPTOS_WASM_OPT_FEATURES" => {

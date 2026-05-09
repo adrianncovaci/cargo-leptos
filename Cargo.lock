@@ -623,6 +623,7 @@ dependencies = [
  "tokio",
  "tokio-process-tools",
  "tracing",
+ "unwrap-infallible",
  "walkdir",
  "wasm_split_cli_support",
  "which",
@@ -5741,9 +5742,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-process-tools"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f9a431cdcc558f10977cea3d3b94226cb1872631687e41139662f1b8abbbc3"
+checksum = "f6b6a47df9702214bf84f3d0f9810527d3135b437b291250dee81a8f38a3aba5"
 dependencies = [
  "bytes",
  "memchr",
@@ -5752,6 +5753,7 @@ dependencies = [
  "tokio",
  "tracing",
  "typed-builder",
+ "unwrap-infallible",
  "windows-sys 0.61.2",
 ]
 
@@ -6083,6 +6085,12 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "unwrap-infallible"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e497bb1f828cc9fb236722c2eaa100dcf201563f38f4da6252357a59037adf31"
 
 [[package]]
 name = "url"

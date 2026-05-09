@@ -381,6 +381,36 @@ disable-server-fn-hash = false
 #
 # Optional, Defaults to false. Env: SERVER_FN_MOD_PATH
 server-fn-mod-path = false
+
+# Whether to gracefully terminate the server process on shutdown (when running `cargo leptos
+# watch` or `cargo leptos serve`).
+#
+# When enabled, cargo-leptos sends the configured Unix signal (SIGINT or SIGTERM) and then
+# escalates to SIGKILL after the timeout below. On Windows it sends CTRL_BREAK_EVENT and
+# escalates to TerminateProcess. Disable to restore the previous immediate-kill behavior.
+#
+# Should your app not register any signal handler, this can still be left active. The default
+# disposition is to immediately kill the process should no handler be registered.
+#
+# Optional. Defaults to true. Env: LEPTOS_GRACEFUL_SHUTDOWN.
+graceful-shutdown = true
+
+# Seconds to wait after sending the configured shutdown signal before escalating to SIGKILL
+# (Unix) / TerminateProcess (Windows).
+#
+# Optional. Defaults to 10. Env: LEPTOS_GRACEFUL_SHUTDOWN_TIMEOUT_SECS.
+graceful-shutdown-timeout-secs = 10
+
+# The Unix signal to use for graceful shutdown. Either "SIGINT" or "SIGTERM". Ignored on
+# Windows (which always uses CTRL_BREAK_EVENT).
+#
+# A `tokio::signal::ctrl_c()` call registers an interrupt (SIGINT) signal handler for example.
+# Only using that in your app and switching to "SIGTERM" here would not gracefully shut down
+# your app. Orchestration tools like Docker or Kubernetes typically send a SIGTERM.
+# Registering handlers for both is your safest bet.
+#
+# Optional. Defaults to "SIGINT". Env: LEPTOS_GRACEFUL_SHUTDOWN_UNIX_SIGNAL.
+graceful-shutdown-unix-signal = "SIGINT"
 ```
 
 <br/>

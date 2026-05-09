@@ -1,4 +1,5 @@
 use crate::command::NewCommand;
+use crate::config::UnixSignal;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
@@ -87,21 +88,21 @@ pub struct Opts {
     #[arg(long, value_parser = clap::builder::BoolishValueParser::new(), action = clap::ArgAction::Set)]
     pub graceful_shutdown: Option<bool>,
 
-    /// Seconds to wait after sending SIGINT (or CTRL+BREAK on Windows) before escalating to SIGTERM
-    /// during a graceful shutdown.
+    /// Seconds to wait after sending the configured Unix shutdown signal (or CTRL_BREAK_EVENT on
+    /// Windows) before escalating to SIGKILL / TerminateProcess.
     ///
     /// Can also be configured via `[package.metadata.leptos]` key
-    /// `graceful-shutdown-interrupt-timeout-secs`.
+    /// `graceful-shutdown-timeout-secs`.
     #[arg(long)]
-    pub graceful_shutdown_interrupt_timeout_secs: Option<u64>,
+    pub graceful_shutdown_timeout_secs: Option<u64>,
 
-    /// Seconds to wait after sending SIGTERM before escalating to SIGKILL during a graceful
-    /// shutdown.
+    /// The Unix signal to use as the first phase of graceful shutdown. Has no effect on Windows
+    /// (which always uses CTRL_BREAK_EVENT).
     ///
     /// Can also be configured via `[package.metadata.leptos]` key
-    /// `graceful-shutdown-terminate-timeout-secs`.
-    #[arg(long)]
-    pub graceful_shutdown_terminate_timeout_secs: Option<u64>,
+    /// `graceful-shutdown-unix-signal`.
+    #[arg(long, value_enum)]
+    pub graceful_shutdown_unix_signal: Option<UnixSignal>,
 }
 
 #[derive(Debug, Clone, Parser, PartialEq, Default)]
