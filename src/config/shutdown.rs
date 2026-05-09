@@ -1,13 +1,16 @@
-use anyhow::anyhow;
+use crate::internal_prelude::*;
+use clap::ValueEnum;
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 use std::time::Duration;
 use tokio_process_tools::UnixGracefulPhase;
 
-/// Signal used to gracefully shut down the user application.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Signal used on unix systems to gracefully shut down the user application.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum UnixSignal {
+    #[value(name = "SIGINT")]
     Sigint,
+    #[value(name = "SIGTERM")]
     Sigterm,
 }
 
@@ -21,15 +24,18 @@ impl UnixSignal {
 }
 
 impl FromStr for UnixSignal {
-    type Err = anyhow::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.trim() {
-            "SIGINT" => Ok(UnixSignal::Sigint),
-            "SIGTERM" => Ok(UnixSignal::Sigterm),
-            other => Err(anyhow!(
-                "Invalid UnixSignal `{other}`. Expected one of: `SIGINT`, `SIGTERM`."
-            )),
+        let trimmed = s.trim();
+        if trimmed.eq_ignore_ascii_case("SIGINT") {
+            Ok(UnixSignal::Sigint)
+        } else if trimmed.eq_ignore_ascii_case("SIGTERM") {
+            Ok(UnixSignal::Sigterm)
+        } else {
+            Err(eyre!(
+                "Invalid UnixSignal `{trimmed}`. Expected one of: `SIGINT`, `SIGTERM`."
+            ))
         }
     }
 }
@@ -49,24 +55,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn accepts_uppercase() {
-            assert_eq!(UnixSignal::from_str("SIGINT").unwrap(), UnixSignal::Sigint);
-            assert_eq!(
-                UnixSignal::from_str("SIGTERM").unwrap(),
-                UnixSignal::Sigterm
-            );
-        }
-
-        #[test]
-        fn is_case_sensitive() {
-            assert!(UnixSignal::from_str("sigint").is_err());
-            assert!(UnixSignal::from_str("SigInt").is_err());
+        fn accepts_case_insensitive() {
+            assert_eq!("sigint".parse::<UnixSignal>().unwrap(), UnixSignal::Sigint);
+            assert_eq!("SigInt".parse::<UnixSignal>().unwrap(), UnixSignal::Sigint);
+            assert_eq!("SIGINT".parse::<UnixSignal>().unwrap(), UnixSignal::Sigint);
         }
 
         #[test]
         fn trims_whitespace() {
             assert_eq!(
-                UnixSignal::from_str("  SIGINT\n").unwrap(),
+                "  SIGINT\n".parse::<UnixSignal>().unwrap(),
                 UnixSignal::Sigint
             );
         }
@@ -74,7 +72,7 @@ mod tests {
         #[test]
         fn rejects_unknown_signal() {
             assert_eq!(
-                UnixSignal::from_str("SIGKILL").unwrap_err().to_string(),
+                "SIGKILL".parse::<UnixSignal>().unwrap_err().to_string(),
                 "Invalid UnixSignal `SIGKILL`. Expected one of: `SIGINT`, `SIGTERM`."
             );
         }
@@ -84,14 +82,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn deserializes_from_uppercase() {
+        fn case_insensitive() {
             let s: UnixSignal = serde_json::from_str(r#""SIGTERM""#).unwrap();
             assert_eq!(s, UnixSignal::Sigterm);
-        }
-
-        #[test]
-        fn rejects_lowercase() {
-            assert!(serde_json::from_str::<UnixSignal>(r#""sigterm""#).is_err());
+            let s: UnixSignal = serde_json::from_str(r#""sigterm""#).unwrap();
+            assert_eq!(s, UnixSignal::Sigterm);
         }
     }
 }

@@ -78,9 +78,9 @@ pub struct Opts {
     #[arg(long, conflicts_with = "frontend_only")]
     pub server_only: bool,
 
-    /// Whether to gracefully terminate the server process whenever termination is required: Either
-    /// because a `cargo-leptos` termination was requested through a `Ctrl+C` or `cargo-leptos`
-    /// shutting down your app before restarting it due to source changes.
+    /// Whether to gracefully terminate the server process whenever termination is required, either
+    /// when termination is requested via `Ctrl+C` or when `cargo-leptos` restarts the app on
+    /// source changes.
     ///
     /// The server SHOULD handle SIGINT and/or SIGTERM signals on unix and the CTRL_BREAK_EVENT
     /// signal on Windows. The signal sent by `cargo-leptos` on a unix platform can be controlled

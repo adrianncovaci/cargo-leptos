@@ -36,7 +36,8 @@ pub struct ShutdownPolicy {
     /// (Unix) / TerminateProcess (Windows).
     pub timeout: Duration,
 
-    /// The Unix signal to use as the first phase of graceful shutdown. Ignored on Windows.
+    /// Signal used on unix systems to gracefully shut down the user application.
+    /// Ignored on Windows.
     pub unix_signal: UnixSignal,
 }
 

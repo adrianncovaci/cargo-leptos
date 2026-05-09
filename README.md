@@ -75,7 +75,7 @@ The dependency for [sass](https://sass-lang.com/install) is automatically instal
 Different versions of the dependencies might accumulate in this directory, so feel free to delete it.
 
 | OS      | Example                                   |
-|---------|-------------------------------------------|
+| ------- | ----------------------------------------- |
 | Linux   | /home/alice/.cache/cargo-leptos           |
 | macOS   | /Users/Alice/Library/Caches/cargo-leptos  |
 | Windows | C:\Users\Alice\AppData\Local\cargo-leptos |
