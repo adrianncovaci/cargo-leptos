@@ -62,7 +62,7 @@ fn overlay(conf: &mut ProjectConfig, envs: impl Iterator<Item = (String, String)
             }
             "LEPTOS_GRACEFUL_SHUTDOWN_UNIX_SIGNAL" => {
                 conf.graceful_shutdown_unix_signal =
-                    Some(UnixSignal::parse_env(&val).map_err(|e| eyre!(e))?)
+                    Some(val.parse::<UnixSignal>().map_err(|e| eyre!(e))?)
             }
             "SERVER_FN_PREFIX" => conf.server_fn_prefix = Some(val),
             "DISABLE_SERVER_FN_HASH" => conf.disable_server_fn_hash = true,

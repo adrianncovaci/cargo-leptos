@@ -78,30 +78,35 @@ pub struct Opts {
     #[arg(long, conflicts_with = "frontend_only")]
     pub server_only: bool,
 
-    /// Gracefully terminate the server process whenever termination is required. The server SHOULD
-    /// handle SIGINT and/or SIGTERM signals on unix and CTRL+BREAK signals on Windows.
+    /// Whether to gracefully terminate the server process whenever termination is required: Either
+    /// because a `cargo-leptos` termination was requested through a `Ctrl+C` or `cargo-leptos`
+    /// shutting down your app before restarting it due to source changes.
     ///
-    /// Defaults to true. Disable with `--graceful-shutdown false`.
+    /// The server SHOULD handle SIGINT and/or SIGTERM signals on unix and the CTRL_BREAK_EVENT
+    /// signal on Windows. The signal sent by `cargo-leptos` on a unix platform can be controlled
+    /// via `graceful_shutdown_unix_signal`.
     ///
-    /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown`. The CLI
-    /// value takes precedence when set explicitly.
+    /// Defaults to `true`. Disable with `--graceful-shutdown false`.
+    ///
+    /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown`.
+    /// The CLI value takes precedence when set explicitly.
     #[arg(long, value_parser = clap::builder::BoolishValueParser::new(), action = clap::ArgAction::Set)]
     pub graceful_shutdown: Option<bool>,
 
-    /// Seconds to wait after sending the configured Unix shutdown signal (or CTRL_BREAK_EVENT on
-    /// Windows) before escalating to SIGKILL / TerminateProcess.
+    /// Seconds to wait for graceful application shutdown to complete before escalating to an
+    /// abrupt kill.
     ///
-    /// Can also be configured via `[package.metadata.leptos]` key
-    /// `graceful-shutdown-timeout-secs`.
+    /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown-timeout-secs`.
+    /// The CLI value takes precedence when set explicitly.
     #[arg(long)]
     pub graceful_shutdown_timeout_secs: Option<u64>,
 
-    /// The Unix signal to use as the first phase of graceful shutdown. Has no effect on Windows
-    /// (which always uses CTRL_BREAK_EVENT).
+    /// The Unix signal to use for graceful shutdown. One of: SIGINT, SIGTERM.
+    /// Has no effect on Windows.
     ///
-    /// Can also be configured via `[package.metadata.leptos]` key
-    /// `graceful-shutdown-unix-signal`.
-    #[arg(long, value_enum)]
+    /// Can also be configured via `[package.metadata.leptos]` key `graceful-shutdown-unix-signal`.
+    /// The CLI value takes precedence when set explicitly.
+    #[arg(long)]
     pub graceful_shutdown_unix_signal: Option<UnixSignal>,
 }
 
